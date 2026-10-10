@@ -560,5 +560,10 @@
     <string name="tasker_blurb_stop">توقف %1$s</string>
     <string name="connection_test_empty_message">جزئیاتی در دسترس نیست</string>
     <string name="value_unknown">ناشناخته</string>
+    <string name="home_headline_off">اتصال خود را شروع کنید</string>
+    <string name="home_headline_on">شما متصل هستید</string>
+    <string name="home_slide_to_connect">برای روشن کردن بکشید</string>
+    <string name="home_slide_to_disconnect">برای خاموش کردن بکشید</string>
+    <string name="home_no_server">سروری انتخاب نشده</string>
 
 </resources>

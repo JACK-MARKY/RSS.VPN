@@ -32,6 +32,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -85,6 +87,14 @@ class MainViewModel(
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
+
+    /** Remarks of the selected server for the home screen; decoded off the main thread. */
+    val selectedServerName: StateFlow<String> = _uiState
+        .map { it.selectedGuid }
+        .distinctUntilChanged()
+        .map { guid -> guid?.let { dataSource.decodeServerConfig(it)?.remarks }.orEmpty() }
+        .flowOn(ioDispatcher)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
 
     // ---------- Keyword filtering ----------
     @Volatile

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">v2rayNG</string>
+    <string name="app_name" translatable="false">RSS.VPN</string>
     <string name="app_widget_name">Switch</string>
     <string name="app_tile_name">Switch</string>
     <string name="app_tile_first_use">Add a profile in the app before using this feature.</string>
@@ -560,5 +560,10 @@
     <string name="tasker_blurb_stop">Stop %1$s</string>
     <string name="connection_test_empty_message">no details available</string>
     <string name="value_unknown">unknown</string>
+    <string name="home_headline_off">Start your connection</string>
+    <string name="home_headline_on">You\'re connected</string>
+    <string name="home_slide_to_connect">Slide to turn on</string>
+    <string name="home_slide_to_disconnect">Slide to turn off</string>
+    <string name="home_no_server">No server selected</string>
 
 </resources>

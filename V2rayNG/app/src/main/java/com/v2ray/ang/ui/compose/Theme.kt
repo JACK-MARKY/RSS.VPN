@@ -27,52 +27,54 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+// RSS.VPN cream (light) theme: warm paper-like surfaces with a deep violet accent
 private val LightColor = lightColorScheme(
-    primary = Color(0xFF000000), // Black
+    primary = Color(0xFF6B3FA0), // Violet
     onPrimary = Color(0xFFFFFFFF), // White
-    primaryContainer = Color(0xFFE0E0E0), // Light Gray
-    onPrimaryContainer = Color(0xFF000000), // Black
-    secondary = Color(0xFFf97910), // Orange
+    primaryContainer = Color(0xFFEBDDFF), // Pale Violet
+    onPrimaryContainer = Color(0xFF260A4F), // Deep Violet
+    secondary = Color(0xFFC96A1B), // Warm Amber
     onSecondary = Color(0xFFFFFFFF), // White
-    secondaryContainer = Color(0xFFFFE8D6), // Pale Orange
-    onSecondaryContainer = Color(0xFF2B1700), // Dark Brown
-    tertiary = Color(0xFF009966), // Green
+    secondaryContainer = Color(0xFFFFE3C7), // Pale Amber
+    onSecondaryContainer = Color(0xFF3A1D00), // Dark Brown
+    tertiary = Color(0xFF2F7D5B), // Green
     onTertiary = Color(0xFFFFFFFF), // White
-    tertiaryContainer = Color(0xFFA0F2D0), // Light Green
-    onTertiaryContainer = Color(0xFF00201A), // Dark Teal
+    tertiaryContainer = Color(0xFFBFEBD3), // Light Green
+    onTertiaryContainer = Color(0xFF00210F), // Dark Green
     error = Color(0xFFBA1A1A), // Red
     errorContainer = Color(0xFFFFDAD6), // Light Red
     onError = Color(0xFFFFFFFF), // White
     onErrorContainer = Color(0xFF410002), // Dark Red
-    background = Color(0xFFFFFFFF), // White
-    onBackground = Color(0xFF1C1B1F), // Near Black
-    surface = Color(0xFFFFFFFF), // White
-    onSurface = Color(0xFF1C1B1F), // Near Black
-    surfaceVariant = Color(0xFFE7E0EC), // Light Purple Gray
-    onSurfaceVariant = Color(0xFF49454F), // Dark Gray
-    outline = Color(0xFF79747E), // Medium Gray
-    outlineVariant = Color(0xFFCAC4D0), // Light Gray
-    inverseSurface = Color(0xFF313033), // Dark Gray
-    inverseOnSurface = Color(0xFFF4EFF4), // Very Light Gray
-    inversePrimary = Color(0xFFC0C0C0), // Silver Gray
+    background = Color(0xFFFAF3E3), // Cream
+    onBackground = Color(0xFF2B2418), // Warm Near Black
+    surface = Color(0xFFFAF3E3), // Cream
+    onSurface = Color(0xFF2B2418), // Warm Near Black
+    surfaceVariant = Color(0xFFEDE3CD), // Darker Cream
+    onSurfaceVariant = Color(0xFF52493A), // Warm Dark Gray
+    outline = Color(0xFF857B69), // Warm Gray
+    outlineVariant = Color(0xFFD6CBB3), // Light Warm Gray
+    inverseSurface = Color(0xFF3A3326), // Dark Warm Gray
+    inverseOnSurface = Color(0xFFF7EFDD), // Light Cream
+    inversePrimary = Color(0xFFD5BAFF), // Light Violet
     scrim = Color(0xFF000000), // Black
-    surfaceTint = Color(0xFF000000), // Black
-    surfaceContainerLowest = Color(0xFFFFFFFF), // White
-    surfaceContainerLow = Color(0xFFF7F7F7), // Very Light Gray
-    surfaceContainer = Color(0xFFF1F1F1), // Light Gray
-    surfaceContainerHigh = Color(0xFFEBEBEB), // Light Gray
-    surfaceContainerHighest = Color(0xFFE5E5E5), // Light Gray
+    surfaceTint = Color(0xFF6B3FA0), // Violet
+    surfaceContainerLowest = Color(0xFFFFFBF2), // Lightest Cream
+    surfaceContainerLow = Color(0xFFF6EEDB), // Cream
+    surfaceContainer = Color(0xFFF1E8D2), // Cream
+    surfaceContainerHigh = Color(0xFFEBE1CA), // Deeper Cream
+    surfaceContainerHighest = Color(0xFFE5DAC2), // Deepest Cream
 )
 
+// RSS.VPN dark theme: near-black surfaces with a soft violet accent
 private val DarkColor = darkColorScheme(
-    primary = Color(0xFFC0C0C0), // Silver Gray
-    onPrimary = Color(0xFF303030), // Dark Gray
-    primaryContainer = Color(0xFF474747), // Gray
-    onPrimaryContainer = Color(0xFFE0E0E0), // Light Gray
-    secondary = Color(0xFFf97910), // Orange
+    primary = Color(0xFFD5BAFF), // Soft Violet
+    onPrimary = Color(0xFF3B1A6E), // Deep Violet
+    primaryContainer = Color(0xFF53308A), // Violet
+    onPrimaryContainer = Color(0xFFEBDDFF), // Pale Violet
+    secondary = Color(0xFFF2A15C), // Warm Amber
     onSecondary = Color(0xFF4E2600), // Dark Brown
     secondaryContainer = Color(0xFF6F3800), // Brown
-    onSecondaryContainer = Color(0xFFFFE8D6), // Pale Orange
+    onSecondaryContainer = Color(0xFFFFE3C7), // Pale Amber
     tertiary = Color(0xFF83D6B5), // Mint Green
     onTertiary = Color(0xFF00382E), // Dark Teal
     tertiaryContainer = Color(0xFF005143), // Teal
@@ -81,24 +83,24 @@ private val DarkColor = darkColorScheme(
     errorContainer = Color(0xFF93000A), // Dark Red
     onError = Color(0xFF690005), // Deep Red
     onErrorContainer = Color(0xFFFFDAD6), // Light Red
-    background = Color(0xFF1C1B1F), // Near Black
-    onBackground = Color(0xFFE6E1E5), // Light Gray
-    surface = Color(0xFF1C1B1F), // Near Black
-    onSurface = Color(0xFFE6E1E5), // Light Gray
-    surfaceVariant = Color(0xFF49454F), // Dark Gray
-    onSurfaceVariant = Color(0xFFCAC4D0), // Light Gray
-    outline = Color(0xFF938F99), // Grayish Purple
-    outlineVariant = Color(0xFF49454F), // Dark Gray
-    inverseSurface = Color(0xFFE6E1E5), // Light Gray
-    inverseOnSurface = Color(0xFF1C1B1F), // Near Black
-    inversePrimary = Color(0xFF000000), // Black
+    background = Color(0xFF121014), // Near Black
+    onBackground = Color(0xFFE8E1E8), // Light Gray
+    surface = Color(0xFF121014), // Near Black
+    onSurface = Color(0xFFE8E1E8), // Light Gray
+    surfaceVariant = Color(0xFF4A444F), // Dark Gray
+    onSurfaceVariant = Color(0xFFCCC4D0), // Light Gray
+    outline = Color(0xFF958E99), // Grayish Purple
+    outlineVariant = Color(0xFF4A444F), // Dark Gray
+    inverseSurface = Color(0xFFE8E1E8), // Light Gray
+    inverseOnSurface = Color(0xFF121014), // Near Black
+    inversePrimary = Color(0xFF6B3FA0), // Violet
     scrim = Color(0xFF000000), // Black
-    surfaceTint = Color(0xFFC0C0C0), // Silver Gray
-    surfaceContainerLowest = Color(0xFF0F0F12), // Near Black
-    surfaceContainerLow = Color(0xFF1A191D), // Dark Gray
-    surfaceContainer = Color(0xFF1E1D21), // Dark Gray
-    surfaceContainerHigh = Color(0xFF282729), // Dark Gray
-    surfaceContainerHighest = Color(0xFF333234), // Dark Gray
+    surfaceTint = Color(0xFFD5BAFF), // Soft Violet
+    surfaceContainerLowest = Color(0xFF0C0A0E), // Near Black
+    surfaceContainerLow = Color(0xFF181519), // Dark Gray
+    surfaceContainer = Color(0xFF1D1A1F), // Dark Gray
+    surfaceContainerHigh = Color(0xFF272429), // Dark Gray
+    surfaceContainerHighest = Color(0xFF322F34), // Dark Gray
 )
 
 // Semantic Colors
@@ -127,7 +129,7 @@ object ThemeManager {
     val themeMode: StateFlow<String> = _themeMode.asStateFlow()
 
     private val _dynamicColorEnabled = MutableStateFlow(
-        MmkvManager.decodeSettingsBool(AppConfig.PREF_DYNAMIC_COLOR, true)
+        MmkvManager.decodeSettingsBool(AppConfig.PREF_DYNAMIC_COLOR, false)
     )
     val dynamicColorEnabled: StateFlow<Boolean> = _dynamicColorEnabled.asStateFlow()
 
@@ -145,7 +147,7 @@ object ThemeManager {
         _themeMode.value =
             MmkvManager.decodeSettingsString(AppConfig.PREF_UI_MODE_NIGHT, "0") ?: "0"
         _dynamicColorEnabled.value =
-            MmkvManager.decodeSettingsBool(AppConfig.PREF_DYNAMIC_COLOR, true)
+            MmkvManager.decodeSettingsBool(AppConfig.PREF_DYNAMIC_COLOR, false)
     }
 }
 
