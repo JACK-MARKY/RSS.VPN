@@ -182,11 +182,14 @@ private fun HomeHeader() {
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Developer logo: replace res/drawable/developer_logo with the real artwork.
+        // Developer logo (res/drawable-nodpi/developer_logo.png). Its artwork has a dark
+        // background, so it is shown as a rounded badge that works on both themes.
         Image(
             painter = painterResource(R.drawable.developer_logo),
             contentDescription = null,
-            modifier = Modifier.size(40.dp)
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(10.dp))
         )
         Spacer(modifier = Modifier.width(12.dp))
         Text(
