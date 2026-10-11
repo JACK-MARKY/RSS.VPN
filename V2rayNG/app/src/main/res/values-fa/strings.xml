@@ -565,5 +565,14 @@
     <string name="home_slide_to_connect">برای روشن کردن بکشید</string>
     <string name="home_slide_to_disconnect">برای خاموش کردن بکشید</string>
     <string name="home_no_server">سروری انتخاب نشده</string>
+    <string name="home_headline_connecting">در حال اتصال…</string>
+    <string name="home_connecting_status">در حال برقراری اتصال امن</string>
+    <string name="mode_simple">حالت ساده</string>
+    <string name="simple_servers_title">سرورها</string>
+    <string name="simple_servers_empty">هنوز سروری نیست. با دکمه + لینک را جای‌گذاری کنید یا QR را اسکن کنید.</string>
+    <string name="simple_servers_test_all">تست همه‌ی سرورها</string>
+    <string name="simple_delay_timeout">بدون پاسخ</string>
+    <string name="simple_advanced_title">تنظیمات پیشرفته</string>
+    <string name="simple_advanced_desc">رفتن به رابط کامل v2ray: مسیریابی، پروکسی برنامه‌ها، ساب‌اسکریپشن، لاگ و بیشتر. برای برگشت از منو «حالت ساده» را بزنید.</string>
 
 </resources>

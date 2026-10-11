@@ -1,6 +1,5 @@
 package com.v2ray.ang.ui.main
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,8 +34,26 @@ import com.v2ray.ang.ui.compose.QRCodeDialog
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
+/**
+ * Entry point of the main screen. RSS.VPN shows the simple home by default; the original
+ * v2rayNG interface is only composed while "Advanced settings" is switched on.
+ */
 @Composable
 fun MainScreen(
+    mainViewModel: MainViewModel,
+    onAction: (MainAction) -> Unit,
+    onNavigate: (MainDestination) -> Unit,
+) {
+    val modeState by mainViewModel.uiState.collectAsStateWithLifecycle()
+    if (modeState.advancedMode) {
+        AdvancedMainScreen(mainViewModel, onAction, onNavigate)
+    } else {
+        SimpleModeScreen(mainViewModel, onAction)
+    }
+}
+
+@Composable
+private fun AdvancedMainScreen(
     mainViewModel: MainViewModel,
     onAction: (MainAction) -> Unit,
     onNavigate: (MainDestination) -> Unit,
@@ -46,7 +63,6 @@ fun MainScreen(
     val isLoading by mainViewModel.isLoading.collectAsStateWithLifecycle()
     val isRunning = uiState.isRunning
     val displayText = mainViewModel.formatStatus(uiState.status)
-    val selectedServerName by mainViewModel.selectedServerName.collectAsStateWithLifecycle()
     val selectedGuid = uiState.selectedGuid
     val doubleColumnDisplay = uiState.doubleColumnDisplay
     val confirmRemove = uiState.confirmRemove
@@ -55,9 +71,6 @@ fun MainScreen(
     val isDarkTheme = LocalDarkTheme.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    // The home screen is the landing view; the server list opens from its server chip.
-    var showHome by rememberSaveable { mutableStateOf(true) }
-    BackHandler(enabled = !showHome && !drawerState.isOpen) { showHome = true }
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showDelAllConfirm by remember { mutableStateOf(false) }
@@ -154,17 +167,7 @@ fun MainScreen(
             )
         }
     ) {
-        if (showHome) {
-            HomeScreen(
-                isRunning = isRunning,
-                serverName = selectedServerName,
-                statusText = displayText,
-                onToggle = { onAction(MainAction.ToggleService) },
-                onTestConnection = { onAction(MainAction.TestCurrentServer) },
-                onOpenServers = { showHome = false },
-                onOpenMenu = { scope.launch { drawerState.open() } }
-            )
-        } else Scaffold(
+        Scaffold(
             contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
             topBar = {
                 MainTopBar(

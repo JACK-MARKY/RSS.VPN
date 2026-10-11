@@ -1,9 +1,9 @@
 package com.v2ray.ang.ui.main
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -14,9 +14,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.horizontalDrag
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -43,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,6 +59,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -76,6 +80,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.LocalDarkTheme
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -87,12 +92,13 @@ import kotlin.math.roundToInt
 @Composable
 fun HomeScreen(
     isRunning: Boolean,
+    isConnecting: Boolean,
     serverName: String,
     statusText: String,
     onToggle: () -> Unit,
     onTestConnection: () -> Unit,
     onOpenServers: () -> Unit,
-    onOpenMenu: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -115,7 +121,11 @@ fun HomeScreen(
                 contentAlignment = Alignment.Center
             ) {
                 val orbSize = minOf(maxWidth * 0.6f, maxHeight * 0.9f)
-                StatusOrb(isRunning = isRunning, modifier = Modifier.size(orbSize))
+                StatusOrb(
+                    isRunning = isRunning,
+                    isConnecting = isConnecting,
+                    modifier = Modifier.size(orbSize)
+                )
             }
 
             ServerChip(serverName = serverName, isRunning = isRunning, onClick = onOpenServers)
@@ -123,7 +133,11 @@ fun HomeScreen(
 
             Text(
                 text = stringResource(
-                    if (isRunning) R.string.home_headline_on else R.string.home_headline_off
+                    when {
+                        isConnecting -> R.string.home_headline_connecting
+                        isRunning -> R.string.home_headline_on
+                        else -> R.string.home_headline_off
+                    }
                 ),
                 fontSize = 48.sp,
                 lineHeight = 54.sp,
@@ -132,12 +146,12 @@ fun HomeScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = statusText,
+                text = if (isConnecting) stringResource(R.string.home_connecting_status) else statusText,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .clickable(role = Role.Button, onClick = onTestConnection)
+                    .clickable(enabled = !isConnecting, role = Role.Button, onClick = onTestConnection)
                     .padding(vertical = 4.dp)
             )
             Spacer(modifier = Modifier.height(28.dp))
@@ -149,6 +163,7 @@ fun HomeScreen(
             ) {
                 SlideToConnect(
                     isRunning = isRunning,
+                    isConnecting = isConnecting,
                     onToggle = onToggle,
                     modifier = Modifier.weight(1f)
                 )
@@ -157,7 +172,7 @@ fun HomeScreen(
                         .size(TRACK_HEIGHT)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.onBackground)
-                        .clickable(role = Role.Button, onClick = onOpenMenu),
+                        .clickable(role = Role.Button, onClick = onOpenSettings),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -175,6 +190,13 @@ fun HomeScreen(
 private val TRACK_HEIGHT = 64.dp
 private val THUMB_SIZE = 56.dp
 private val THUMB_INSET = 4.dp
+
+// Release thresholds as a fraction of the track: past 55% connects, below 45% disconnects.
+private const val RELEASE_TO_CONNECT = 0.55f
+private const val RELEASE_TO_DISCONNECT = 0.45f
+
+// How long the knob keeps its new side while waiting for the service (VPN permission dialog etc.).
+private const val EXPECT_TIMEOUT_MS = 6_000L
 
 @Composable
 private fun HomeHeader() {
@@ -202,18 +224,23 @@ private fun HomeHeader() {
 }
 
 @Composable
-private fun StatusOrb(isRunning: Boolean, modifier: Modifier = Modifier) {
+private fun StatusOrb(isRunning: Boolean, isConnecting: Boolean, modifier: Modifier = Modifier) {
     val isDark = LocalDarkTheme.current
-    val transition = rememberInfiniteTransition(label = "orb")
-    val pulse = transition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.05f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "orbPulse"
-    )
+
+    // The orb breathes (shrinks and grows) only while a connection is being set up.
+    val pulse = if (isConnecting) {
+        rememberInfiniteTransition(label = "orb").animateFloat(
+            initialValue = 0.9f,
+            targetValue = 1.08f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "orbPulse"
+        )
+    } else {
+        null
+    }
 
     val topEnd by animateColorAsState(
         targetValue = if (isRunning) Color(0xFF9EE0C2) else Color(0xFFB3BDE0),
@@ -229,7 +256,7 @@ private fun StatusOrb(isRunning: Boolean, modifier: Modifier = Modifier) {
 
     Canvas(
         modifier = modifier.graphicsLayer {
-            val scale = if (isRunning) pulse.value else 1f
+            val scale = pulse?.value ?: 1f
             scaleX = scale
             scaleY = scale
         }
@@ -285,47 +312,74 @@ private fun ServerChip(serverName: String, isRunning: Boolean, onClick: () -> Un
     }
 }
 
+/**
+ * Slide the knob right to connect. While connected (or connecting) the knob rests on the
+ * right; sliding it back to the left disconnects. The knob follows the finger exactly
+ * (state is written straight from the pointer events, no per-event coroutines) and the
+ * rest of the time it simply mirrors the real service state.
+ */
 @Composable
 private fun SlideToConnect(
     isRunning: Boolean,
+    isConnecting: Boolean,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
-    val progress = remember { Animatable(if (isRunning) 1f else 0f) }
     var trackWidthPx by remember { mutableIntStateOf(0) }
-    var awaiting by remember { mutableStateOf(false) }
-    val latestRunning by rememberUpdatedState(isRunning)
+    var knobX by remember { mutableFloatStateOf(0f) }
+    var dragging by remember { mutableStateOf(false) }
+    // Side the knob should rest on right after a completed slide, until the service agrees.
+    var expected by remember { mutableStateOf<Boolean?>(null) }
+    var settleJob by remember { mutableStateOf<Job?>(null) }
 
     val thumbPx = with(density) { THUMB_SIZE.toPx() }
     val insetPx = with(density) { THUMB_INSET.toPx() }
-    val maxOffset = (trackWidthPx - thumbPx - 2 * insetPx).coerceAtLeast(1f)
+    val maxOffset = (trackWidthPx - thumbPx - 2 * insetPx).coerceAtLeast(0f)
+    val engaged = isRunning || isConnecting
+    val restEngaged = expected ?: engaged
 
-    // The service state is the source of truth: settle the thumb whenever it changes.
-    LaunchedEffect(isRunning) {
-        awaiting = false
-        progress.animateTo(if (isRunning) 1f else 0f, tween(300))
+    val latestMax by rememberUpdatedState(maxOffset)
+    val latestRest by rememberUpdatedState(restEngaged)
+    val latestLocked by rememberUpdatedState(isConnecting)
+    val latestToggle by rememberUpdatedState(onToggle)
+
+    fun settleTo(target: Float) {
+        settleJob?.cancel()
+        settleJob = scope.launch {
+            animate(knobX, target, animationSpec = tween(250)) { value, _ -> knobX = value }
+        }
     }
-    // If the service never reports back (e.g. VPN permission refused), return the thumb.
-    LaunchedEffect(awaiting) {
-        if (awaiting) {
-            delay(10_000)
-            awaiting = false
-            progress.animateTo(if (latestRunning) 1f else 0f, tween(300))
+
+    // First measurement: jump straight to the resting side (no slide-in when reopening connected).
+    LaunchedEffect(maxOffset) {
+        if (!dragging) knobX = if (restEngaged) maxOffset else 0f
+    }
+    // Follow the real service state; ignored while the user is holding the knob.
+    LaunchedEffect(restEngaged) {
+        if (!dragging) settleTo(if (restEngaged) latestMax else 0f)
+    }
+    // Drop the expectation once the service agrees, or give up after a while.
+    LaunchedEffect(expected, engaged) {
+        val wanted = expected ?: return@LaunchedEffect
+        if (wanted == engaged) {
+            expected = null
+        } else {
+            delay(EXPECT_TIMEOUT_MS)
+            expected = null
         }
     }
 
     val label = stringResource(
-        if (isRunning) R.string.home_slide_to_disconnect else R.string.home_slide_to_connect
-    )
-    val draggableState = rememberDraggableState { delta ->
-        scope.launch {
-            progress.snapTo((progress.value + delta / maxOffset).coerceIn(0f, 1f))
+        when {
+            isConnecting -> R.string.home_headline_connecting
+            isRunning -> R.string.home_slide_to_disconnect
+            else -> R.string.home_slide_to_connect
         }
-    }
+    )
 
-    // The thumb math is absolute, so keep the slider left-to-right in RTL locales too.
+    // The knob maths is absolute, so keep the track left-to-right in RTL locales too.
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Box(
             modifier = modifier
@@ -338,26 +392,10 @@ private fun SlideToConnect(
                     role = Role.Button
                     contentDescription = label
                     onClick(label = label) {
-                        onToggle()
+                        if (!latestLocked) latestToggle()
                         true
                     }
-                }
-                .draggable(
-                    state = draggableState,
-                    orientation = Orientation.Horizontal,
-                    enabled = !awaiting,
-                    onDragStopped = {
-                        val triggered = if (latestRunning) progress.value < 0.2f
-                        else progress.value > 0.8f
-                        if (triggered) {
-                            awaiting = true
-                            progress.animateTo(if (latestRunning) 0f else 1f, tween(200))
-                            onToggle()
-                        } else {
-                            progress.animateTo(if (latestRunning) 1f else 0f, tween(200))
-                        }
-                    }
-                ),
+                },
             contentAlignment = Alignment.CenterStart
         ) {
             Text(
@@ -367,30 +405,77 @@ private fun SlideToConnect(
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(
+                        start = if (restEngaged) 0.dp else THUMB_SIZE,
+                        end = if (restEngaged) THUMB_SIZE else 0.dp
+                    )
                     .graphicsLayer {
-                        val p = progress.value
-                        alpha = if (latestRunning) p else 1f - p
+                        val fraction = if (latestMax > 0f) (knobX / latestMax).coerceIn(0f, 1f) else 0f
+                        alpha = when {
+                            latestLocked -> 1f
+                            latestRest -> fraction
+                            else -> 1f - fraction
+                        }
                     }
             )
             Box(
                 modifier = Modifier
                     .padding(THUMB_INSET)
-                    .offset { IntOffset((progress.value * maxOffset).roundToInt(), 0) }
+                    .offset { IntOffset(knobX.roundToInt(), 0) }
                     .size(THUMB_SIZE)
                     .shadow(6.dp, CircleShape)
-                    .background(MaterialTheme.colorScheme.onBackground, CircleShape),
+                    .background(MaterialTheme.colorScheme.onBackground, CircleShape)
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            val max = latestMax
+                            // Ignore touches while a start is in flight, or before the track is measured.
+                            if (latestLocked || max <= 0f) return@awaitEachGesture
+
+                            settleJob?.cancel()
+                            dragging = true
+                            val startedEngaged = latestRest
+                            var x = knobX
+                            horizontalDrag(down.id) { change ->
+                                x = (x + change.positionChange().x).coerceIn(0f, max)
+                                knobX = x
+                                change.consume()
+                            }
+                            dragging = false
+
+                            val progress = x / max
+                            val fire = if (startedEngaged) progress <= RELEASE_TO_DISCONNECT
+                            else progress >= RELEASE_TO_CONNECT
+                            if (fire) {
+                                val nowEngaged = !startedEngaged
+                                expected = nowEngaged
+                                settleTo(if (nowEngaged) max else 0f)
+                                latestToggle()
+                            } else {
+                                settleTo(if (startedEngaged) max else 0f)
+                            }
+                        }
+                    },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    painter = painterResource(
-                        if (isRunning) R.drawable.ic_stop_24dp else R.drawable.ic_arrow_back_24dp
-                    ),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.background,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .graphicsLayer { rotationZ = if (isRunning) 0f else 180f }
-                )
+                if (isConnecting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.5.dp,
+                        color = MaterialTheme.colorScheme.background
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(
+                            if (restEngaged) R.drawable.ic_stop_24dp else R.drawable.ic_arrow_back_24dp
+                        ),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.background,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .graphicsLayer { rotationZ = if (restEngaged) 0f else 180f }
+                    )
+                }
             }
         }
     }

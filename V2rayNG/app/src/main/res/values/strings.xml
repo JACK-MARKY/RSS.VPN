@@ -565,5 +565,14 @@
     <string name="home_slide_to_connect">Slide to turn on</string>
     <string name="home_slide_to_disconnect">Slide to turn off</string>
     <string name="home_no_server">No server selected</string>
+    <string name="home_headline_connecting">Connecting…</string>
+    <string name="home_connecting_status">Setting up a secure connection</string>
+    <string name="mode_simple">Simple mode</string>
+    <string name="simple_servers_title">Servers</string>
+    <string name="simple_servers_empty">No servers yet. Tap + to paste a link or scan a QR code.</string>
+    <string name="simple_servers_test_all">Test all servers</string>
+    <string name="simple_delay_timeout">Timeout</string>
+    <string name="simple_advanced_title">Advanced settings</string>
+    <string name="simple_advanced_desc">Switch to the full v2ray interface: routing, per-app proxy, subscriptions, logs and more. Turn it off from the menu (Simple mode) to come back.</string>
 
 </resources>

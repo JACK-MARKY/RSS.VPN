@@ -83,10 +83,30 @@ class MainViewModel(
             selectedGroupId = dataSource.getSelectedSubscriptionId(),
             selectedGuid = dataSource.getSelectServer(),
             confirmRemove = dataSource.getConfirmRemove(),
-            doubleColumnDisplay = dataSource.getDoubleColumnDisplay()
+            doubleColumnDisplay = dataSource.getDoubleColumnDisplay(),
+            advancedMode = dataSource.getAdvancedMode()
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
+
+    // ---------- Connecting state (simple home screen) ----------
+    private var connectingJob: Job? = null
+
+    /** Marks a start request as in flight; cleared by the service result or after a timeout. */
+    fun beginConnecting() {
+        connectingJob?.cancel()
+        _uiState.update { it.copy(isConnecting = true) }
+        connectingJob = viewModelScope.launch {
+            delay(CONNECTING_TIMEOUT_MS)
+            _uiState.update { it.copy(isConnecting = false) }
+        }
+    }
+
+    private fun finishConnecting() {
+        connectingJob?.cancel()
+        connectingJob = null
+        _uiState.update { if (it.isConnecting) it.copy(isConnecting = false) else it }
+    }
 
     /** Remarks of the selected server for the home screen; decoded off the main thread. */
     val selectedServerName: StateFlow<String> = _uiState
@@ -137,14 +157,19 @@ class MainViewModel(
 
     private fun handleServiceEvent(event: MainServiceEvent) {
         when (event) {
-            MainServiceEvent.StateRunning -> updateRunningState(true, clearTestingText = false)
+            MainServiceEvent.StateRunning -> {
+                finishConnecting()
+                updateRunningState(true, clearTestingText = false)
+            }
             MainServiceEvent.StateNotRunning -> updateRunningState(false, clearTestingText = false)
             MainServiceEvent.StateStartSuccess -> {
+                finishConnecting()
                 toastSuccess(R.string.toast_services_success)
                 updateRunningState(true)
             }
 
             is MainServiceEvent.StateStartFailure -> {
+                finishConnecting()
                 if (!event.message.isNullOrBlank()) {
                     toastError(event.message)
                 } else {
@@ -153,7 +178,10 @@ class MainViewModel(
                 updateRunningState(false)
             }
 
-            MainServiceEvent.StateStopSuccess -> updateRunningState(false)
+            MainServiceEvent.StateStopSuccess -> {
+                finishConnecting()
+                updateRunningState(false)
+            }
             is MainServiceEvent.MeasureDelayResult -> {
                 if (!uiState.value.isRunning || !testRequests.completeCurrent(event.requestId)) return
                 _uiState.update { it.copy(isTesting = testRequests.isTesting, status = MainStatus.ConnectionTest(event.result)) }
@@ -308,6 +336,11 @@ class MainViewModel(
 
             MainAction.DismissQRCodeDialog -> {
                 _uiState.update { it.copy(shareQRCodeBitmap = null) }
+            }
+
+            is MainAction.SetAdvancedMode -> {
+                dataSource.setAdvancedMode(action.enabled)
+                _uiState.update { it.copy(advancedMode = action.enabled) }
             }
 
             MainAction.ToggleService,
@@ -967,5 +1000,6 @@ class MainViewModel(
 
     private companion object {
         const val TEST_RESULT_FLUSH_INTERVAL_MS = 500L
+        const val CONNECTING_TIMEOUT_MS = 20_000L
     }
 }

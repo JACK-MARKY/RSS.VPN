@@ -116,6 +116,13 @@ class MainRepository(
 
     override fun setSelectServer(guid: String) = MmkvManager.setSelectServer(guid)
 
+    override fun getAdvancedMode(): Boolean =
+        MmkvManager.decodeSettingsBool(AppConfig.PREF_ADVANCED_MODE, false)
+
+    override fun setAdvancedMode(enabled: Boolean) {
+        MmkvManager.encodeSettings(AppConfig.PREF_ADVANCED_MODE, enabled)
+    }
+
     override fun getConfirmRemove(): Boolean =
         MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
 

@@ -18,6 +18,9 @@ interface MainDataSource : Closeable {
     fun getSelectServer(): String?
     fun setSelectServer(guid: String)
 
+    fun getAdvancedMode(): Boolean
+    fun setAdvancedMode(enabled: Boolean)
+
     fun getConfirmRemove(): Boolean
     fun getDoubleColumnDisplay(): Boolean
     fun isGroupAllDisplayEnabled(): Boolean

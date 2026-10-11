@@ -26,7 +26,11 @@ data class MainUiState(
     val locateTarget: LocateTarget? = null,
     val confirmRemove: Boolean = false,
     val doubleColumnDisplay: Boolean = false,
-    val shareQRCodeBitmap: android.graphics.Bitmap? = null
+    val shareQRCodeBitmap: android.graphics.Bitmap? = null,
+    /** False = simple RSS.VPN home; true = the full v2rayNG interface. */
+    val advancedMode: Boolean = false,
+    /** True from the moment a start was requested until the service reports success or failure. */
+    val isConnecting: Boolean = false
 )
 
 /**
@@ -63,6 +67,7 @@ sealed interface MainAction {
     data class ShareClipboard(val guid: String) : MainAction
     data class ShareFullContent(val guid: String) : MainAction
     data object DismissQRCodeDialog : MainAction
+    data class SetAdvancedMode(val enabled: Boolean) : MainAction
 
     data class ImportBatchConfig(val configText: String) : MainAction
 
