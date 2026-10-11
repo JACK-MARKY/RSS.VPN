@@ -89,7 +89,13 @@ jobs:
         cd ${{ github.workspace }}/V2rayNG
         echo "sdk.dir=${ANDROID_HOME}" > local.properties
         chmod 755 gradlew
-        ./gradlew assemblePlaystoreDebug
+        # Keep the full log and surface compile errors as annotations so they are easy to read.
+        set -o pipefail
+        if ! ./gradlew assemblePlaystoreDebug --console=plain 2>&1 | tee ../build.log; then
+          errs=$(grep -E '^e: |error:|What went wrong' -A2 ../build.log | head -40 | sed ':a;N;$!ba;s/\n/%0A/g')
+          echo "::error title=Gradle build failed::${errs}"
+          exit 1
+        fi
 
     - name: Upload APKs
       uses: actions/upload-artifact@v7
