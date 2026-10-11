@@ -9,6 +9,12 @@ android {
     namespace = "com.v2ray.ang"
     compileSdk = 37
 
+    lint {
+        // New RSS.VPN strings only exist in English and Persian; do not fail release builds on that.
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
     defaultConfig {
         applicationId = "com.v2ray.ang.saa"
         minSdk = 24

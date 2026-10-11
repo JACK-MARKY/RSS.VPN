@@ -82,8 +82,8 @@ jobs:
         distribution: 'temurin'
         java-version: '21'
 
-    # Debug build: signed automatically with the standard debug key, so no
-    # keystore or secrets are needed. Fine for personal use and friends.
+    # Release build (much faster at runtime than debug), signed with signing/rss-release.jks so
+    # every new version installs over the previous one. The key is public on purpose (personal app).
     - name: Build APK
       run: |
         cd ${{ github.workspace }}/V2rayNG
@@ -91,7 +91,11 @@ jobs:
         chmod 755 gradlew
         # Keep the full log and surface compile errors as annotations so they are easy to read.
         set -o pipefail
-        if ! ./gradlew assemblePlaystoreDebug --console=plain 2>&1 | tee ../build.log; then
+        if ! ./gradlew assemblePlaystoreRelease --console=plain \
+            -Pandroid.injected.signing.store.file=${{ github.workspace }}/signing/rss-release.jks \
+            -Pandroid.injected.signing.store.password=d9TLi_H2p1-Zv3q9EQuncS9o \
+            -Pandroid.injected.signing.key.alias=rssvpn \
+            -Pandroid.injected.signing.key.password=d9TLi_H2p1-Zv3q9EQuncS9o 2>&1 | tee ../build.log; then
           errs=$(grep -E '^e: |error:|What went wrong' -A2 ../build.log | head -40 | sed ':a;N;$!ba;s/\n/%0A/g')
           echo "::error title=Gradle build failed::${errs}"
           exit 1
@@ -102,4 +106,4 @@ jobs:
       if: ${{ success() }}
       with:
         name: RSS.VPN-apk
-        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/playstore/debug/*.apk
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/playstore/release/*.apk
